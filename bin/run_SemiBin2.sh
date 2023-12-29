@@ -1,4 +1,5 @@
 #!/bin/bash
+#Author: Sumeet Tiwari
 # SemiBin2=v2.0.2
 # Script to run SemiBin2
 

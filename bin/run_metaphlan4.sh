@@ -1,4 +1,5 @@
 #!/bin/bash
+#Author: Sumeet Tiwari
 #Metaphlan4=v4.0.6
 # Script to run metaphlan4
 
