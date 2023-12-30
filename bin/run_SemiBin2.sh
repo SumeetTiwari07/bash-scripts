@@ -4,15 +4,16 @@
 # Script to run SemiBin2
 
 # Initialize variables
+FORWARD=""
+REVERSE=""
 CONTIG=""
-BAM=""
 OUTPUTDIR=""
-THREADS=1
 ENVIRONMENT=""
+THREADS=1
 
 # Function to display usage information
 usage() {
-    echo "Usage: $0 -c CONTIG -b BAM -e ENVIRONMENT -o OUTPUTDIR -t THREADS"
+    echo "Usage: $0 -1 FORWARD -2 REVERSE -c CONTIG -e ENVIRONMENT -o OUTPUTDIR -t THREADS"
     exit 1
 }
 
@@ -25,10 +26,11 @@ check_file() {
 }
 
 # Parse command-line arguments
-while getopts "c:b:e:o:t:" opt; do
+while getopts "1:2:c:e:o:t:" opt; do
     case $opt in
+        1) FORWARD=$OPTARG ;;
+        2) REVERSE=$OPTARG ;;
         c) CONTIG=$OPTARG ;;
-        b) BAM=$OPTARG ;;
         e) ENVIRONMENT=$OPTARG ;;
         o) OUTPUTDIR=$OPTARG ;;
         t) THREADS=$OPTARG ;;
@@ -37,13 +39,30 @@ while getopts "c:b:e:o:t:" opt; do
 done
 
 # Check if all the parameters are specified
-if [ -z "$CONTIG" ] || [ -z "$BAM" ] || [ -z "$OUTPUTDIR" ] || [ -z "$ENVIRONMENT" ]; then
-    echo "Error: $CONTIG, $BAM, $OUTPUTDIR and $ENVIRONMENT are required"
+if [ -z "$FORWARD" ] || [ -z "$REVERSE" ] || [ -z "$CONTIG" ] || [ -z "$OUTPUTDIR" ] || [ -z "$ENVIRONMENT" ]; then
+    echo "Error: $FORWARD, $REVERSE, $CONTIG, $OUTPUTDIR and $ENVIRONMENT are required"
     usage
 fi
 
 # Check input files exist
+check_file "$FORWARD"
+check_file "$REVERSE"
 check_file "$CONTIG"
+
+mkdir -p "$OUTPUTDIR" # Create directory
+
+# Run mapping
+echo "Mapping reads to the reference..."
+bowtie2-build -f "$CONTIG" "$OUTPUTDIR/ref"
+bowtie2 -q --fr -x "$OUTPUTDIR/ref" -1 $FORWARD -2 $REVERSE -S "$OUTPUTDIR/sample.sam" -p $THREADS
+samtools view -h -b -S "$OUTPUTDIR/sample.sam" -o "$OUTPUTDIR/sample.bam"
+samtools view -b -F 4 "$OUTPUTDIR/sample.bam" -o "$OUTPUTDIR/sample.mapped.bam"
+samtools sort "$OUTPUTDIR/sample.mapped.bam" -o "$OUTPUTDIR/sample.mapped.sorted.bam"
+samtools index "$OUTPUTDIR/sample.mapped.sorted.bam"
+
+BAM="$OUTPUTDIR/sample.mapped.sorted.bam"
+
+# Check if the bam file exists
 check_file "$BAM"
 
 # Run SemiBin2
@@ -52,6 +71,10 @@ SemiBin2 single_easy_bin \
     --environment "$ENVIRONMENT" \
     -i "$CONTIG" \
     -b "$BAM" \
-    -o "$OUTPUTDIR"
+    -o "$OUTPUTDIR/bins"
+
+# remove temporary files
+rm $OUTPUTDIR/ref*
+rm $OUTPUTDIR/sample*
 
 echo "SemiBin2 complete."
