@@ -67,11 +67,16 @@ check_file "$BAM"
 
 # Run SemiBin2
 echo "Running SemiBin2..."
+
+# Get sample name
+NAME=$(basename "$OUTPUTDIR")
+echo "$NAME"
+
 SemiBin2 single_easy_bin \
     --environment "$ENVIRONMENT" \
     -i "$CONTIG" \
     -b "$BAM" \
-    -o "$OUTPUTDIR/bins"
+    -o "$OUTPUTDIR/bins" --tag-output "$NAME-bin"
 
 # remove temporary files
 rm $OUTPUTDIR/ref*
